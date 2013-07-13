@@ -1,7 +1,7 @@
 /*
   crc32.c
 
-  Prametrized 32bit cyclic redundancy check computation.
+  Parametrized 32bit cyclic redundancy check computation.
 */
 
 
@@ -65,7 +65,7 @@ static inline crc32_t bmirr( crc32_t val, unsigned int n )
 	return ref;
 }
 
-static void calc_table( crc32_t *table, crc32_t poly, int lsb )
+static int calc_table( crc32_t *table, crc32_t poly, int lsb )
 {
 	crc32_t pom = lsb ? bmirr( poly, 32 ) : poly;	// bit order!
 	crc32_t rem;
@@ -78,6 +78,7 @@ static void calc_table( crc32_t *table, crc32_t poly, int lsb )
 		table[i] = rem;
 	}
 	table_valid = 1;
+	return 0;
 }
 
 int crc32_update( crc32_t *crc, void *data, size_t sz )
@@ -98,8 +99,8 @@ int crc32_init( crc32_t *crc )
 {
 	if ( NULL == crc )
 		return errno = EINVAL, -1;
-	if ( !table_valid )
-		calc_table( table, a->poly, a->lsb );
+	if ( !table_valid && 0 != calc_table( table, a->poly, a->lsb ) )
+		return -1;
 	*crc = a->init;
 	return 0;
 }
@@ -143,22 +144,23 @@ int crc32_setcustom( crc32_t initval, crc32_t finalxor, crc32_t polynom, int lsb
 	printf( "name=\"%s\" poly=0x%08X init=0x%08X final=0x%08X lsb=%d\n", \
 			(P)->name, (P)->poly, (P)->init, (P)->final, (P)->lsb );
 
-
 void crc32_dumpalgos( void )
 {
 	for ( int i = 0; NULL != algo[i].name; ++i )
 		DUMPPARM( &algo[i] );
 }
 
+#ifdef DEBUG
+
 void crc32_dumpparam( void )
 {
 	DUMPPARM( a );
 }
 
-void crc32_dumptable( void )
+int crc32_dumptable( void )
 {
-	if ( !table_valid )
-		calc_table( table, a->poly, a->lsb );
+	if ( !table_valid && 0 != calc_table( table, a->poly, a->lsb ) )
+		return -1;
 	printf( "crc32_t table[] = {" );
 	for ( int i = 0; i <= 0xFF; ++i )
 	{
@@ -167,6 +169,9 @@ void crc32_dumptable( void )
 		printf( "0x%08X, ", table[i] );
 	}
 	printf( "\n};\n" );
+	return 0;
 }
+
+#endif
 
 /* EOF */

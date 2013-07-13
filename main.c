@@ -1,7 +1,7 @@
 /*
   crc32
 
-  Print checksums for file(s)
+  Print parametrized CRC32 for files.
 */
 
 // support large files > 2 GB
@@ -68,11 +68,15 @@ static void usage( const char *argv0 )
 		"  -h     	display this help and exit\n"
 		"  -a NAME  use predefined algorithm NAME; cannot be combined with options e, i, f, p\n"
 		"           Type \"%s -a help\" to print a list of available algorithms.\n"
-		"  -e 	 	least significant bit first (default)\n"
-		"  -E 	 	most significant bit first\n"
-		"  -i HEX 	initial CRC value, default: 0xFFFFFFFF\n"
-		"  -f HEX  	final XOR value, default: 0xFFFFFFFF\n"
-		"  -p HEX  	generator polynom, defaut: 0x04C11DB7\n"
+		"  -e       least significant bit first (default)\n"
+		"  -E       most significant bit first\n"
+		"  -i HEX   initial CRC value, default: 0xFFFFFFFF\n"
+		"  -f HEX   final XOR value, default: 0xFFFFFFFF\n"
+		"  -p HEX   generator polynom, defaut: 0x04C11DB7\n"
+#ifdef DEBUG
+		"  -d       dump current parameer set\n"
+		"  -D       dump resulting remainder table\n"
+#endif
 		"Description:\n"
 		"  Compute and print CRC32 checksums for files.\n"
 		"  With no FILE, or when FILE is -, read standard input.\n"
@@ -84,11 +88,16 @@ static void usage( const char *argv0 )
 static int do_config( int argc, char *argv[] )
 {
 	int opt;
-	const char *ostr = "+:dDeEha:i:f:p:";
-	const char *algo = "crc32";
-	int custom = 0;
+	const char *ostr = "+:eEha:i:f:p:"
+#ifdef DEBUG
+		"dD";
 	int dumpparam = 0;
 	int dumptable = 0;
+#else
+		;
+#endif
+	const char *algo = "crc32";
+	int custom = 0;
 	crc32_t init = 0xFFFFFFFF;
 	crc32_t final = 0xFFFFFFFF;
 	crc32_t poly = 0x04C11DB7;
@@ -98,15 +107,17 @@ static int do_config( int argc, char *argv[] )
 	{
 		switch ( opt )
 		{
-		case 'a':
-			algo = optarg;
-			custom = 0;
-			break;
+#ifdef DEBUG
 		case 'd':
 			dumpparam = 1;
 			break;
 		case 'D':
 			dumptable = 1;
+			break;
+#endif
+		case 'a':
+			algo = optarg;
+			custom = 0;
 			break;
 		case 'e':
 			lsb = 1;
@@ -143,20 +154,23 @@ static int do_config( int argc, char *argv[] )
 
 	if ( 0 < custom )
 	{
-		fprintf( stderr, "blargh\n" );
 		crc32_setcustom( init, final, poly, lsb );
 	}
 	else if ( 0 != crc32_setalgorithm( algo ) )
 	{
-		fprintf( stderr, "Unrecognized algorithm '%s'. Supported algorithms:\n", algo );
+		if ( 0 != strcmp( algo, CUSTOM_NAME ) )
+			fprintf( stderr, "Unrecognized algorithm '%s'. ", algo );
+		fprintf( stderr, "Supported algorithms:\n" );
 		crc32_dumpalgos();
 		fprintf( stderr, "\n" );
 		return -1;
 	}
+#ifdef DEBUG
 	if ( dumpparam )
 		crc32_dumpparam();
-	if ( dumptable )
-		crc32_dumptable();
+	if ( dumptable && 0 != crc32_dumptable() )
+		return perror( "dumptable" ), -1;
+#endif
 	return optind;
 }
 

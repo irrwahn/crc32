@@ -1,5 +1,8 @@
+# crc32 Makefile
+
 LDFLAGS=
-CFLAGS=-std=gnu99 -W -Wall -Wextra -O3 -DDEBUG
+CFLAGS=-std=gnu99 -W -Wall -Wextra -O3
+# -DDEBUG
 STRIP=strip
 RM=rm -f
 INSTALL=install -D
@@ -21,3 +24,5 @@ $(BINARY): $(SRC)
 
 install:
 	$(INSTALL) $(BINARY) ${DESTDIR}/usr/local/bin
+
+# EOF

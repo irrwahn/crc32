@@ -18,8 +18,10 @@ extern int crc32_setalgorithm( const char *name );
 extern int crc32_setcustom( crc32_t initval, crc32_t finalxor, crc32_t polynom, int lsb );
 extern void crc32_dumpalgos( void );
 
+#ifdef DEBUG
 extern void crc32_dumpparam( void );
-extern void crc32_dumptable( void );
+extern int crc32_dumptable( void );
+#endif
 
 #endif // CRC32_H_INCLUDED
 
