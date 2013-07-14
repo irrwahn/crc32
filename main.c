@@ -2,6 +2,7 @@
   crc32
 
   Print parametrized CRC32 for files.
+
 */
 
 // support large files > 2 GB
@@ -55,7 +56,7 @@ int computeCRC32( FILE *fp, crc32_t *crc )
 }
 
 
-static void usage( const char *argv0 )
+static void usage( const char *argv0, int show_algo )
 {
 	const char *progname = strrchr( argv0, '/' );
 
@@ -65,34 +66,44 @@ static void usage( const char *argv0 )
 		"Usage:\n"
 		"  %s [OPTION] ... [FILE] ...\n"
 		"Options:\n"
-		"  -h     	display this help and exit\n"
-		"  -a NAME  use predefined algorithm NAME; cannot be combined with options e, i, f, p\n"
-		"           Type \"%s -a help\" to print a list of available algorithms.\n"
-		"  -e       least significant bit first (default)\n"
-		"  -E       most significant bit first\n"
+		"  -h     	Display this help and exit.\n"
+		"  -a NAME  Use predefined algorithm NAME; cannot be combined with options e, i, f, p;\n"
+		"            \"-a help\" prints a list of preset algorithms.\n"
 		"  -i HEX   initial CRC value, default: 0xFFFFFFFF\n"
-		"  -f HEX   final XOR value, default: 0xFFFFFFFF\n"
+		"  -x HEX   final XOR value, default: 0xFFFFFFFF\n"
 		"  -p HEX   generator polynom, defaut: 0x04C11DB7\n"
+		"  -f HEX   bitwise OR of flags (default: 3)\n"
+		"            1:reflect input\n"
+		"            2:reflect output\n"
+		"            4:reverse output byte order\n"
 #ifdef DEBUG
 		"  -d       dump current parameer set\n"
 		"  -D       dump resulting remainder table\n"
+		"  -T       execute self test and exit (can be combined with d and D)\n"
 #endif
 		"Description:\n"
 		"  Compute and print CRC32 checksums for files.\n"
 		"  With no FILE, or when FILE is -, read standard input.\n"
-		, progname, progname, progname
+		, progname, progname
 	);
+	if ( show_algo )
+	{
+		printf( "\nPreset algorithms:\n" );
+		crc32_dumpalgos();
+		printf( "\n" );
+	}
 }
 
 
 static int do_config( int argc, char *argv[] )
 {
 	int opt;
-	const char *ostr = "+:eEha:i:f:p:"
+	const char *ostr = "+:ha:f:i:p:x:"
 #ifdef DEBUG
-		"dD";
+		"dDT";
 	int dumpparam = 0;
 	int dumptable = 0;
+	int selftest = 0;
 #else
 		;
 #endif
@@ -101,7 +112,7 @@ static int do_config( int argc, char *argv[] )
 	crc32_t init = 0xFFFFFFFF;
 	crc32_t final = 0xFFFFFFFF;
 	crc32_t poly = 0x04C11DB7;
-	int lsb = 1;
+	unsigned flags = CRC_RFIO;
 
 	while ( -1 != ( opt = getopt( argc, argv, ostr ) ) )
 	{
@@ -114,21 +125,16 @@ static int do_config( int argc, char *argv[] )
 		case 'D':
 			dumptable = 1;
 			break;
+		case 'T':
+			selftest = 1;
+			break;
 #endif
 		case 'a':
 			algo = optarg;
 			custom = 0;
 			break;
-		case 'e':
-			lsb = 1;
-			++custom;
-			break;
-		case 'E':
-			lsb = 0;
-			++custom;
-			break;
 		case 'f':
-			final = strtoul( optarg, NULL, 16 );
+			flags = strtoul( optarg, NULL, 16 );
 			++custom;
 			break;
 		case 'i':
@@ -137,6 +143,10 @@ static int do_config( int argc, char *argv[] )
 			break;
 		case 'p':
 			poly = strtoul( optarg, NULL, 16 );
+			++custom;
+			break;
+		case 'x':
+			final = strtoul( optarg, NULL, 16 );
 			++custom;
 			break;
 		case ':':
@@ -154,18 +164,25 @@ static int do_config( int argc, char *argv[] )
 
 	if ( 0 < custom )
 	{
-		crc32_setcustom( init, final, poly, lsb );
+		crc32_setcustom( init, final, poly, flags );
 	}
 	else if ( 0 != crc32_setalgorithm( algo ) )
 	{
-		if ( 0 != strcmp( algo, CUSTOM_NAME ) )
-			fprintf( stderr, "Unrecognized algorithm '%s'. ", algo );
-		fprintf( stderr, "Supported algorithms:\n" );
-		crc32_dumpalgos();
-		fprintf( stderr, "\n" );
-		return -1;
+		if ( 0 != strcmp( algo, "help" ) )
+			fprintf( stderr, "Unrecognized algorithm '%s'.\n", algo );
+		return -2;
 	}
 #ifdef DEBUG
+	if ( selftest )
+	{
+		int e;
+		printf( "Executing selftest...\n" );
+		if ( 0 > ( e = crc32_selftest( dumpparam, dumptable ) ) )
+			perror( "self test" );
+		else
+			printf( "Unexpected failures: %d\n", e );
+		exit( e ? EXIT_FAILURE : EXIT_SUCCESS );
+	}
 	if ( dumpparam )
 		crc32_dumpparam();
 	if ( dumptable && 0 != crc32_dumptable() )
@@ -182,9 +199,9 @@ int main( int argc, char *argv[] )
 	FILE *fp;
 	char *files[] = { "-", NULL };
 
-	if ( 0 > do_config( argc, argv ) )
+	if ( 0 > ( i = do_config( argc, argv ) ) )
 	{
-		usage( argv[0] );
+		usage( argv[0], -1 > i );
 		exit( EXIT_FAILURE );
 	}
 	if ( NULL == argv[optind] )
@@ -209,7 +226,7 @@ int main( int argc, char *argv[] )
 			++err;
 		}
 		else
-			printf( "%08X %s\n", crc, argv[i] );
+			printf( "%08X %s\n", crc, stdin == fp ? "" : argv[i] );
 		if ( stdin != fp )
 			fclose( fp );
     }
