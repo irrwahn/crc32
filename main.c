@@ -23,7 +23,11 @@
 
 #define CHUNK_SIZE	( 4 * 1024 )
 
-int computeCRC32( FILE *fp, crc32_t *crc )
+
+static size_t printsize = 0;
+
+
+static int computeCRC32( FILE *fp, crc32_t *crc, size_t *sz )
 {
 	uint8_t buf[CHUNK_SIZE];
 	off_t size = 0;
@@ -48,6 +52,7 @@ int computeCRC32( FILE *fp, crc32_t *crc )
 	}
 	// printf( "bread:%ld\n", bread );
 	crc32_final( crc );
+	*sz = bread;
 	if ( ferror( fp ) )
 		return -1;
 	if ( fp != stdin && size != bread )
@@ -66,13 +71,14 @@ static void usage( const char *argv0, int show_algo )
 		"Usage:\n"
 		"  %s [OPTION] ... [FILE] ...\n"
 		"Options:\n"
-		"  -h     	Display this help and exit.\n"
-		"  -a NAME  Use predefined algorithm NAME; cannot be combined with options e, i, f, p;\n"
+		"  -h       display this help and exit\n"
+		"  -s|S		print number of processed bytes, S: human readable\n"
+		"  -a NAME  use predefined algorithm NAME\n"
 		"            \"-a help\" prints a list of preset algorithms.\n"
 		"  -i HEX   initial CRC value, default: 0xFFFFFFFF\n"
 		"  -x HEX   final XOR value, default: 0xFFFFFFFF\n"
 		"  -p HEX   generator polynom, defaut: 0x04C11DB7\n"
-		"  -f HEX   bitwise OR of flags (default: 3)\n"
+		"  -f HEX   bitwise OR of flags, default: 3\n"
 		"            1:reflect input\n"
 		"            2:reflect output\n"
 		"            4:reverse output byte order\n"
@@ -98,7 +104,7 @@ static void usage( const char *argv0, int show_algo )
 static int do_config( int argc, char *argv[] )
 {
 	int opt;
-	const char *ostr = "+:ha:f:i:p:x:"
+	const char *ostr = "+:hsSa:f:i:p:x:"
 #ifdef DEBUG
 		"dDT";
 	int dumpparam = 0;
@@ -144,6 +150,12 @@ static int do_config( int argc, char *argv[] )
 		case 'p':
 			poly = strtoul( optarg, NULL, 16 );
 			++custom;
+			break;
+		case 's':
+			printsize = 1;
+			break;
+		case 'S':
+			printsize = 2;
 			break;
 		case 'x':
 			final = strtoul( optarg, NULL, 16 );
@@ -196,6 +208,7 @@ int main( int argc, char *argv[] )
 {
 	int i, err = 0;
 	uint32_t crc = 0;
+	size_t sz;
 	FILE *fp;
 	char *files[] = { "-", NULL };
 
@@ -220,13 +233,26 @@ int main( int argc, char *argv[] )
 			++err;
 			continue;
 		}
-		if ( 0 != computeCRC32( fp, &crc ) )
+		if ( 0 != computeCRC32( fp, &crc, &sz ) )
 		{
 			perror( argv[i] );
 			++err;
 		}
 		else
-			printf( "%08X %s\n", crc, stdin == fp ? "" : argv[i] );
+		{
+			const char *name;
+			name = stdin == fp ? "" : argv[i];
+			if ( printsize )
+			{
+				int pfx = 0;
+				const char *spfx = " KMGTPEZY";
+				while ( 1 < printsize && 1024 < sz )
+					sz /= 1024, ++pfx;
+				printf( "%08X %3zu%c %s\n", crc, sz, spfx[pfx], name );
+			}
+			else
+				printf( "%08X %s\n", crc, name );
+		}
 		if ( stdin != fp )
 			fclose( fp );
     }
