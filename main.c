@@ -83,7 +83,7 @@ static void usage( const char *argv0, int show_algo )
 		"            2:reflect output\n"
 		"            4:reverse output byte order\n"
 #ifdef DEBUG
-		"  -d       dump current parameer set\n"
+		"  -d       dump current parameter set\n"
 		"  -D       dump resulting remainder table\n"
 		"  -T       execute self test and exit (can be combined with d and D)\n"
 #endif
