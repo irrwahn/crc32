@@ -1,3 +1,9 @@
+/*
+ * This file is part of the crc32 project.
+ *
+ * Copyright (c) 2013 Urban Wallasch <irrwahn35@freenet.de>
+ * See LICENSE file for more details.
+ */
 #ifndef CRC32_H_INCLUDED
 #define CRC32_H_INCLUDED
 

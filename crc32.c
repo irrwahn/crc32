@@ -1,4 +1,10 @@
 /*
+ * This file is part of the crc32 project.
+ *
+ * Copyright (c) 2013 Urban Wallasch <irrwahn35@freenet.de>
+ * See LICENSE file for more details.
+ */
+/*
   crc32.c
 
   Parametrized 32bit cyclic redundancy check computation.
