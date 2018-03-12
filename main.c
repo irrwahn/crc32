@@ -78,7 +78,7 @@ static void usage( const char *argv0, int show_algo )
 		"  %s [OPTION] ... [FILE] ...\n"
 		"Options:\n"
 		"  -h       display this help and exit\n"
-		"  -s|S		print number of processed bytes, S: human readable\n"
+		"  -s|S     print number of processed bytes, S: human readable\n"
 		"  -a NAME  use predefined algorithm NAME\n"
 		"            \"-a help\" prints a list of preset algorithms.\n"
 		"  -i HEX   initial CRC value, default: 0xFFFFFFFF\n"
