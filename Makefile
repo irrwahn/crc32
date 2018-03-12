@@ -5,11 +5,10 @@ CFLAGS=-std=gnu99 -W -Wall -Wextra -O3
 # -DDEBUG
 STRIP=strip
 RM=rm -f
-INSTALL=install -D
 
 BINARY=crc32
 SRC=*.c
-DESTDIR=
+PREFIX?=/usr/local
 
 .PHONY: all clean install
 
@@ -23,6 +22,7 @@ $(BINARY): $(SRC)
 	$(STRIP) $(BINARY)
 
 install:
-	$(INSTALL) $(BINARY) ${DESTDIR}/usr/local/bin
+	mkdir -p ${PREFIX}/bin
+	cp -v $(BINARY) ${PREFIX}/bin/
 
 # EOF
